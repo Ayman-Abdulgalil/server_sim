@@ -271,5 +271,34 @@ pub fn cam_movement(
             .y
             .clamp(cam_sets.y_limit.start, cam_sets.y_limit.end);
         cam.translation.z = cam.translation.z.clamp(min_z, max_z);
+    } else {
+        // FIXED: Apply friction even when not navigating to finish deceleration
+        let delta_time = time.delta_secs();
+        
+        // Continue applying friction until velocity is negligible
+        if cam_sets.current_velocity.length() > 0.001 {
+            cam_sets.current_velocity = cam_sets
+                .current_velocity
+                .lerp(Vec3::ZERO, cam_sets.friction * delta_time);
+            
+            // Apply remaining velocity
+            cam.translation += cam_sets.current_velocity * delta_time;
+            
+            // Maintain boundary constraints during deceleration
+            let min_x = -cam_sets.nav_margin;
+            let max_x = cam_sets.x_limit.end + cam_sets.nav_margin;
+            let min_z = -cam_sets.nav_margin;
+            let max_z = cam_sets.z_limit.end + cam_sets.nav_margin;
+
+            cam.translation.x = cam.translation.x.clamp(min_x, max_x);
+            cam.translation.y = cam
+                .translation
+                .y
+                .clamp(cam_sets.y_limit.start, cam_sets.y_limit.end);
+            cam.translation.z = cam.translation.z.clamp(min_z, max_z);
+        } else {
+            // Velocity is negligible, snap to zero
+            cam_sets.current_velocity = Vec3::ZERO;
+        }
     }
 }
