@@ -101,15 +101,9 @@ pub fn setup_camera(mut commands: Commands, mut cam_sets: ResMut<CamSettings>) {
 
 /// Calculates shortest angular distance between two angles.
 /// Handles wrapping at ±π to prevent the "long way around" rotation.
-///
-/// # Example
-/// 
-/// Without wrapping: 3.1 -> -3.1 = -6.2 (spins almost full circle)
-/// With wrapping:    3.1 -> -3.1 = 0.08 (tiny rotation)
-/// 
 fn angle_difference(target: f32, current: f32) -> f32 {
     let mut diff = target - current;
-    
+
     // Normalize to [-π, π] range
     while diff > std::f32::consts::PI {
         diff -= 2.0 * std::f32::consts::PI;
@@ -117,8 +111,16 @@ fn angle_difference(target: f32, current: f32) -> f32 {
     while diff < -std::f32::consts::PI {
         diff += 2.0 * std::f32::consts::PI;
     }
-    
+
     diff
+}
+
+/// Frame-rate independent exponential smoothing factor.
+///
+/// Given a "sharpness" (bigger = snappier) and delta-time,
+/// returns an interpolation factor in [0, 1).
+fn exp_smooth_factor(sharpness: f32, dt: f32) -> f32 {
+    1.0 - (-sharpness * dt).exp()
 }
 
 /// Main camera control system - handles input and applies smooth movement/rotation
@@ -133,6 +135,10 @@ pub fn cam_movement(
     mut cursor_options: Single<&mut CursorOptions>,
     mut window: Single<&mut Window, With<PrimaryWindow>>,
 ) {
+    // Clamp dt so a single long frame doesn't cause a huge "catch up" step.
+    // Adjust as desired (1/30 = tolerate down to ~30 FPS smoothly).
+    let dt = time.delta_secs().min(1.0 / 30.0);
+
     // === Mode Toggle (Tab key) ===
     if keyboard_input.just_pressed(KeyCode::Tab) {
         cam_sets.cam_state = match cam_sets.cam_state {
@@ -154,9 +160,6 @@ pub fn cam_movement(
     }
 
     // === Navigation Check ===
-    // Two ways to navigate:
-    // 1. Free camera mode (toggled with Tab) - for mouse users
-    // 2. Middle mouse button held - for trackpad users
     let is_navigating =
         cam_sets.cam_state == CamState::Free || mouse_buttons.pressed(MouseButton::Middle);
 
@@ -176,7 +179,7 @@ pub fn cam_movement(
         // Update target rotation based on mouse input
         cam_sets.target_yaw -= delta.x * 0.003;
         cam_sets.target_pitch -= delta.y * 0.003;
-        
+
         // Clamp pitch to prevent looking straight up/down (gimbal lock)
         cam_sets.target_pitch = cam_sets
             .target_pitch
@@ -185,21 +188,21 @@ pub fn cam_movement(
         // Get current rotation angles
         let (current_yaw, current_pitch, _) = cam.rotation.to_euler(EulerRot::YXZ);
 
-        // Smoothly interpolate toward target rotation
+        // === Rotation Smoothing (frame-rate independent) ===
+        let rot_a = exp_smooth_factor(cam_sets.rotation_smoothing, dt);
+
         // Use angle_difference for yaw to handle wrapping at ±π
         let yaw_diff = angle_difference(cam_sets.target_yaw, current_yaw);
-        let smoothed_yaw = current_yaw + yaw_diff * cam_sets.rotation_smoothing * time.delta_secs();
-        let smoothed_pitch = current_pitch
-            + (cam_sets.target_pitch - current_pitch)
-                * cam_sets.rotation_smoothing
-                * time.delta_secs();
+        let smoothed_yaw = current_yaw + yaw_diff * rot_a;
+        let smoothed_pitch =
+            current_pitch + (cam_sets.target_pitch - current_pitch) * rot_a;
 
         // Apply smoothed rotation
         cam.rotation = Quat::from_euler(EulerRot::YXZ, smoothed_yaw, smoothed_pitch, 0.0);
 
         // === Camera Movement (Keyboard Input) ===
         let mut target_velocity = Vec3::ZERO;
-        
+
         // Calculate movement directions relative to camera orientation
         let forward = cam.forward();
         let forward_flattened = Vec3::new(forward.x, 0.0, forward.z).normalize_or_zero();
@@ -212,7 +215,7 @@ pub fn cam_movement(
         if keyboard_input.pressed(KeyCode::KeyS) || keyboard_input.pressed(KeyCode::ArrowDown) {
             target_velocity -= forward_flattened;
         }
-        
+
         // Left/Right (A/D or Arrow keys)
         if keyboard_input.pressed(KeyCode::KeyA) || keyboard_input.pressed(KeyCode::ArrowLeft) {
             target_velocity -= *right;
@@ -220,7 +223,7 @@ pub fn cam_movement(
         if keyboard_input.pressed(KeyCode::KeyD) || keyboard_input.pressed(KeyCode::ArrowRight) {
             target_velocity += *right;
         }
-        
+
         // Up (Space/Shift/E) - Reduced to 85% to feel less floaty
         if keyboard_input.pressed(KeyCode::Space)
             || keyboard_input.pressed(KeyCode::ShiftRight)
@@ -228,7 +231,7 @@ pub fn cam_movement(
         {
             target_velocity += Vec3::Y * 0.85;
         }
-        
+
         // Down (Shift/Ctrl/Q)
         if keyboard_input.pressed(KeyCode::ShiftLeft)
             || keyboard_input.pressed(KeyCode::ControlRight)
@@ -240,26 +243,22 @@ pub fn cam_movement(
         // Normalize and scale by current speed
         target_velocity = target_velocity.normalize_or_zero() * cam_sets.speed;
 
-        // === Velocity Smoothing ===
-        let delta_time = time.delta_secs();
-        
+        // === Velocity Smoothing (frame-rate independent) ===
+        let accel_a = exp_smooth_factor(cam_sets.acceleration, dt);
+        let fric_a = exp_smooth_factor(cam_sets.friction, dt);
+
         if target_velocity.length() > 0.01 {
             // Player is pressing movement keys: accelerate toward target
-            cam_sets.current_velocity = cam_sets
-                .current_velocity
-                .lerp(target_velocity, cam_sets.acceleration * delta_time);
+            cam_sets.current_velocity = cam_sets.current_velocity.lerp(target_velocity, accel_a);
         } else {
             // No input: apply friction to slow down smoothly
-            cam_sets.current_velocity = cam_sets
-                .current_velocity
-                .lerp(Vec3::ZERO, cam_sets.friction * delta_time);
+            cam_sets.current_velocity = cam_sets.current_velocity.lerp(Vec3::ZERO, fric_a);
         }
 
         // Apply smoothed velocity to camera position
-        cam.translation += cam_sets.current_velocity * delta_time;
+        cam.translation += cam_sets.current_velocity * dt;
 
         // === Boundary Constraints ===
-        // Keep camera within allowed area (board + margin)
         let min_x = -cam_sets.nav_margin;
         let max_x = cam_sets.x_limit.end + cam_sets.nav_margin;
         let min_z = -cam_sets.nav_margin;
@@ -273,17 +272,15 @@ pub fn cam_movement(
         cam.translation.z = cam.translation.z.clamp(min_z, max_z);
     } else {
         // FIXED: Apply friction even when not navigating to finish deceleration
-        let delta_time = time.delta_secs();
-        
+        let fric_a = exp_smooth_factor(cam_sets.friction, dt);
+
         // Continue applying friction until velocity is negligible
         if cam_sets.current_velocity.length() > 0.001 {
-            cam_sets.current_velocity = cam_sets
-                .current_velocity
-                .lerp(Vec3::ZERO, cam_sets.friction * delta_time);
-            
+            cam_sets.current_velocity = cam_sets.current_velocity.lerp(Vec3::ZERO, fric_a);
+
             // Apply remaining velocity
-            cam.translation += cam_sets.current_velocity * delta_time;
-            
+            cam.translation += cam_sets.current_velocity * dt;
+
             // Maintain boundary constraints during deceleration
             let min_x = -cam_sets.nav_margin;
             let max_x = cam_sets.x_limit.end + cam_sets.nav_margin;
