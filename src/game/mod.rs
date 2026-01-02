@@ -1,7 +1,6 @@
 pub mod components;
 pub mod constants;
-pub mod fx_node_select;
-pub mod fx_tile_hover;
+pub mod tile;
 pub mod input_click;
 pub mod node_type;
 pub mod plugin;

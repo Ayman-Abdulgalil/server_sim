@@ -1,19 +1,31 @@
-use bevy::{prelude::*, window::{CursorOptions, CursorGrabMode}};
+use bevy::{
+    prelude::*,
+    window::{PresentMode, WindowMode, WindowPlugin, WindowPosition, WindowResolution},
+};
 
-mod game;
 mod camera;
+mod game;
 mod ui;
 
 use crate::game::GameLogicPlugin;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(DefaultPlugins.set(WindowPlugin {
+            primary_window: Some(Window {
+                title: "server_sim".into(),
+                resolution: WindowResolution::new(1080, 720),
+                resizable: true,
+                decorations: true,
+                transparent: false,
+                position: WindowPosition::Centered(MonitorSelection::Primary),
+                mode: WindowMode::Windowed,
+                present_mode: PresentMode::AutoVsync,
+                prevent_default_event_handling: false,
+                ..default()
+            }),
+            ..default()
+        }))
         .add_plugins(GameLogicPlugin)
-        .add_systems(Startup, setup_window)
         .run();
-}
-
-fn setup_window(mut cursor_options: Single<&mut CursorOptions>,) {
-    cursor_options.grab_mode = CursorGrabMode::Confined;
 }

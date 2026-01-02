@@ -10,7 +10,7 @@ use bevy::{
 use crate::game::Game;
 
 use super::components::MainCam;
-use super::consts;
+use super::constants;
 use super::movement::{
     apply_friction_and_coast, apply_smoothed_rotation, apply_speed_scroll,
     clamp_translation, compute_target_velocity, update_look_targets, update_velocity,
@@ -43,7 +43,7 @@ pub fn cam_movement(
     mut cam: Single<&mut Transform, With<MainCam>>,
 ) {
     // AccumulatedMouseMotion/Scroll are resources that reset each frame. [web:32]
-    let dt_move = time.delta_secs().min(consts::MAX_DT);
+    let dt_move = time.delta_secs().min(constants::MAX_DT);
     let dt_rot = time.delta_secs();
 
     let in_free = *cam_state.get() == CamState::Free;
@@ -77,7 +77,7 @@ pub fn cam_movement(
         let yaw_err = angle_difference(cam_sets.target_yaw, cy).abs();
         let pitch_err = (cam_sets.target_pitch - cp).abs();
 
-        if yaw_err < consts::ROT_STOP_EPS && pitch_err < consts::ROT_STOP_EPS {
+        if yaw_err < constants::ROT_STOP_EPS && pitch_err < constants::ROT_STOP_EPS {
             cam_sets.rotating = false;
         }
     }
@@ -102,7 +102,6 @@ pub fn mode_toggle(
             cursor_options.visible = false;
 
             next_cam_state.set(CamState::Free);
-            info!("Camera set to Free. Cursor position: {:?}", cam_sets.last_cursor_pos);
         }
         CamState::Free => {
             if let Some(pos) = cam_sets.last_cursor_pos {
@@ -112,7 +111,6 @@ pub fn mode_toggle(
             cursor_options.grab_mode = CursorGrabMode::Confined;
 
             next_cam_state.set(CamState::Fixed);
-            info!("Camera set to Fixed. Cursor position: {:?}", window.cursor_position());
         }
     }
 }

@@ -12,7 +12,6 @@ pub fn handle_ui_buttons(
     for (interaction, button) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
             game.hotbar_selection = button.node_type;
-            println!("Selected: {}", button.node_type.name());
         }
     }
 }
@@ -34,6 +33,5 @@ pub fn handle_hotkeys(keys: Res<ButtonInput<KeyCode>>, mut game: ResMut<Game>) {
 
     if let Some(node_type) = selection {
         game.hotbar_selection = node_type;
-        println!("Selected: {}", node_type.name());
     }
 }

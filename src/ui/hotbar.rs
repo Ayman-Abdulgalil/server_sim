@@ -15,6 +15,7 @@ pub fn setup_fixed_cam_ui(mut commands: Commands) {
                 padding: UiRect::bottom(Val::Px(20.0)),
                 ..default()
             },
+            Pickable::IGNORE,
             FixedCamUiRoot,
         ))
         .id();

@@ -1,13 +1,12 @@
-use bevy::prelude::*;
+use super::resources::Game;
+use super::setup::init_asset_handles_system;
+use super::setup::setup_game_system;
+use super::state::GameState;
 
 use crate::camera::CamPlugin;
 use crate::ui::UIPlugin;
 
-use super::fx_tile_hover::animate_tile_hover_fx_system;
-use super::input_click::board_click_system;
-use super::resources::Game;
-use super::setup::setup_game_system;
-use super::state::GameState;
+use bevy::prelude::*;
 
 pub struct GameLogicPlugin;
 
@@ -16,11 +15,9 @@ impl Plugin for GameLogicPlugin {
         app.add_plugins((MeshPickingPlugin, CamPlugin, UIPlugin))
             .init_resource::<Game>()
             .init_state::<GameState>()
-            .add_systems(OnEnter(GameState::Playing), setup_game_system)
             .add_systems(
-                Update,
-                (board_click_system, animate_tile_hover_fx_system)
-                    .run_if(in_state(GameState::Playing)),
+                OnEnter(GameState::Playing),
+                (init_asset_handles_system, setup_game_system).chain(),
             );
     }
 }

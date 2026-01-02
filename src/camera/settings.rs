@@ -3,7 +3,7 @@ use std::{f32::consts::FRAC_PI_2, ops::Range};
 
 use crate::game::Game;
 
-use super::consts;
+use super::constants;
 
 #[derive(Resource, Default)]
 pub struct CamSettings {
@@ -45,13 +45,13 @@ impl CamSettings {
         let board_center = Vec3::new(
             game.board_size_x as f32 / 2.0,
             0.0,
-            game.board_size_y as f32 / 2.0,
+            game.board_size_z as f32 / 2.0,
         );
 
         let cam_position = Vec3::new(
             game.board_size_x as f32 / 2.0,
-            2.0 * game.board_size_y as f32 / 3.0,
-            game.board_size_y as f32 / 2.0 + 10.0,
+            2.0 * game.board_size_z as f32 / 3.0,
+            game.board_size_z as f32 / 2.0 + 10.0,
         );
 
         let nav_margin = 8.0;
@@ -73,7 +73,7 @@ impl CamSettings {
             friction: 6.0,
             current_velocity: Vec3::ZERO,
 
-            pitch_limit: FRAC_PI_2 - consts::PITCH_EPS,
+            pitch_limit: FRAC_PI_2 - constants::PITCH_EPS,
             target_yaw: 0.0,
             target_pitch: 0.0,
 

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::consts;
+use super::constants;
 use super::math::{angle_difference, exp_smooth_factor};
 use super::settings::CamSettings;
 
@@ -9,12 +9,12 @@ pub fn apply_speed_scroll(scroll_y: f32, cam_sets: &mut CamSettings) {
         return;
     }
 
-    let k = (scroll_y * cam_sets.sensitivity * consts::SPEED_SCROLL_RATE).exp();
+    let k = (scroll_y * cam_sets.sensitivity * constants::SPEED_SCROLL_RATE).exp();
     cam_sets.speed = (cam_sets.speed * k).clamp(cam_sets.speed_range.start, cam_sets.speed_range.end);
 }
 
 pub fn update_look_targets(delta: Vec2, cam_sets: &mut CamSettings) {
-    let rot_per_pixel = consts::ROT_PER_PIXEL * cam_sets.rotation_scale();
+    let rot_per_pixel = constants::ROT_PER_PIXEL * cam_sets.rotation_scale();
 
     cam_sets.target_yaw -= delta.x * rot_per_pixel;
     cam_sets.target_pitch -= delta.y * rot_per_pixel;
@@ -64,13 +64,13 @@ pub fn compute_target_velocity(
         || keyboard_input.pressed(KeyCode::ShiftRight)
         || keyboard_input.pressed(KeyCode::KeyE)
     {
-        v += Vec3::Y * consts::VERTICAL_MOVE_SCALE;
+        v += Vec3::Y * constants::VERTICAL_MOVE_SCALE;
     }
     if keyboard_input.pressed(KeyCode::ShiftLeft)
         || keyboard_input.pressed(KeyCode::ControlRight)
         || keyboard_input.pressed(KeyCode::KeyQ)
     {
-        v -= Vec3::Y * consts::VERTICAL_MOVE_SCALE;
+        v -= Vec3::Y * constants::VERTICAL_MOVE_SCALE;
     }
 
     v.normalize_or_zero() * speed
