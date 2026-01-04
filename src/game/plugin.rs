@@ -1,9 +1,9 @@
-use super::asset_systems::{
-    init_asset_handles_system, reset_hover_materials_system, update_hover_materials_system,
-};
 use super::resources::Game;
 use super::setup::setup_game_system;
 use super::state::GameState;
+use super::systems::{
+    init_asset_handles_system, reset_hover_materials_system, update_selection_lift_system,
+};
 
 use crate::camera::{CamPlugin, CamState};
 use crate::ui::UIPlugin;
@@ -23,7 +23,7 @@ impl Plugin for GameLogicPlugin {
             )
             .add_systems(
                 Update,
-                update_hover_materials_system.run_if(in_state(CamState::Fixed)),
+                update_selection_lift_system.run_if(in_state(CamState::Fixed)),
             )
             .add_systems(OnEnter(CamState::Free), reset_hover_materials_system);
     }

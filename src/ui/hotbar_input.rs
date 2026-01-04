@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use crate::game::types::ToolType;
 
 use crate::game::{Game, NodeType};
 
@@ -11,7 +12,7 @@ pub fn handle_ui_buttons(
     // Interaction is how Bevy reports hovered/pressed/none for UI widgets. [web:50]
     for (interaction, button) in &mut interaction_query {
         if *interaction == Interaction::Pressed {
-            game.hotbar_selection = button.node_type;
+            game.tool_selection = ToolType::Add(button.node_type);
         }
     }
 }
@@ -27,11 +28,10 @@ pub fn handle_hotkeys(keys: Res<ButtonInput<KeyCode>>, mut game: ResMut<Game>) {
         _ if keys.just_pressed(KeyCode::Digit7) => Some(NodeType::Queue),
         _ if keys.just_pressed(KeyCode::Digit8) => Some(NodeType::Cache),
         _ if keys.just_pressed(KeyCode::Digit9) => Some(NodeType::CDN),
-        _ if keys.just_pressed(KeyCode::Digit0) => Some(NodeType::None),
         _ => None,
     };
 
     if let Some(node_type) = selection {
-        game.hotbar_selection = node_type;
+        game.tool_selection = ToolType::Add(node_type);
     }
 }

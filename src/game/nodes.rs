@@ -1,7 +1,7 @@
-use super::components::TileNodeLink;
+use super::components::{NodeTag, TileNodeLink, TileTag};
 use super::constants::*;
-use super::node_type::NodeType;
 use super::resources::{Game, RenderAssets};
+use super::types::{NodeType, ToolType};
 
 use crate::camera::CamState;
 
@@ -9,81 +9,69 @@ use bevy::prelude::*;
 
 pub fn spawn_node(
     commands: &mut Commands,
+    link: &mut TileNodeLink,
     render_assets: &RenderAssets,
-    game: &mut Game,
-    node_selection: NodeType,
+    node_type: NodeType,
     x: usize,
     z: usize,
 ) {
-    let Some((mesh, mat, _vfx)) = render_assets.get_node_assets(node_selection) else {
-        game.board[z][x].node_entity = None;
-        return;
-    };
-
-    let tile_e = game.board[z][x].tile_entity;
+    let (mesh, mat, _vfx) = render_assets.get_node_assets(node_type);
 
     let node_e = commands
         .spawn((
             Mesh3d(mesh),
             MeshMaterial3d(mat),
-            Transform::from_xyz(x as f32, NODE_SPAWN_Y, z as f32),
+            Transform::from_xyz(x as f32, NODE_SPAWN_Y + SPAWN_FALL_Y, z as f32),
             Pickable::default(),
         ))
         .observe(node_click_event)
-        .observe(hover_over_event)
-        .observe(hover_out_event)
+        .observe(node_hover_over_event)
+        .observe(node_hover_out_event)
         .id();
 
-    // Store the relationship on both entities.
-    let component = TileNodeLink {
-        tile: tile_e,
-        node: Some(node_e),
-        node_type: Some(node_selection),
-        hovered: false,
-        anim_transition: 0.0,
-    };
-    commands.entity(node_e).insert(component);
-    commands.entity(tile_e).insert(component);
+    commands.entity(node_e).insert((
+        TileNodeLink {
+            tile: link.tile,
+            node: Some(node_e),
+        },
+        NodeTag {
+            selected: false,
+            node_type: node_type,
+            base_y: NODE_SPAWN_Y,
+            curr_y: NODE_SPAWN_Y + SPAWN_FALL_Y,
+        },
+    ));
 
-    game.board[z][x].node_entity = Some(node_e);
+    link.node = Some(node_e);
 }
 
-pub fn node_click_event(
+fn node_click_event(
     mut click: On<Pointer<Click>>,
     mut commands: Commands,
-    mut game: ResMut<Game>,
+    game: ResMut<Game>,
     buttons: Res<ButtonInput<MouseButton>>,
     cam_state: Res<State<CamState>>,
-    ui_query: Query<&Interaction, With<Button>>,
-    link_gt: Query<&GlobalTransform, With<TileNodeLink>>,
     mut links: Query<&mut TileNodeLink>,
 ) {
     if click.event.button != PointerButton::Primary {
         return;
     }
 
-    // check if the click landed on a ui element, camera is in Free mode or the middle button is pressed
-    let should_skip: bool;
-    if ui_query.iter().any(|i| *i != Interaction::None) {
-        should_skip = true;
-    } else if *cam_state == CamState::Free || buttons.pressed(MouseButton::Middle) {
-        should_skip = true;
-    } else {
-        should_skip = false;
-    }
-
-    if should_skip {
+    // Skip if free-cam, or middle mouse pressed.
+    if *cam_state == CamState::Free || buttons.pressed(MouseButton::Middle) {
         click.propagate(false);
         return;
     }
 
-    // get clicked node world position
-    let Ok(global_transform) = link_gt.get(click.entity) else {
+    if game.tool_selection != ToolType::Delete {
+        return;
+    }
+
+    // Compute board coords from picking hit position.
+    let Some(world_position) = click.event.hit.position else {
+        click.propagate(false);
         return;
     };
-    let world_position: Vec3 = global_transform.translation();
-
-    // convert to board coords
     let tile_x = world_position.x.round() as i32;
     let tile_z = world_position.z.round() as i32;
     if tile_x < 0 || tile_z < 0 {
@@ -96,64 +84,71 @@ pub fn node_click_event(
         return;
     }
 
-    let node_selection = game.hotbar_selection;
-    if node_selection == NodeType::None {
-        // delete node
-        let Some(entity) = game.board[tile_z][tile_x].node_entity else {
-            return;
-        };
-
-        let tile_e = game.board[tile_z][tile_x].tile_entity;
-        if let Ok(mut tile_link) = links.get_mut(tile_e) {
-            tile_link.node = None;
-            tile_link.node_type = None;
-            tile_link.hovered = false;
-            tile_link.anim_transition = 0.0;
-        }
-
-        commands.entity(entity).despawn();
-        game.board[tile_z][tile_x].node_entity = None;
+    let Ok(node_link) = links.get(click.entity) else {
         return;
+    };
+
+    let Some(node_e) = node_link.node else {
+        return;
+    };
+    let tile_e = node_link.tile;
+    click.propagate(false);
+    commands.entity(node_e).despawn();
+    if let Ok(mut tile_l) = links.get_mut(tile_e) {
+        tile_l.node = None;
     }
 }
 
-pub fn hover_over_event(
+fn node_hover_over_event(
     over: On<Pointer<Over>>,
-    mut commands: Commands,
-    q_links: Query<&TileNodeLink>,
+    render_assets: Res<RenderAssets>,
+    mut nodes: Query<
+        (
+            &NodeTag,
+            &TileNodeLink,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        (With<NodeTag>, Without<TileTag>),
+    >,
+    mut tiles: Query<&mut MeshMaterial3d<StandardMaterial>, (With<TileTag>, Without<NodeTag>)>,
 ) {
-    if let Ok(link) = q_links.get(over.entity) {
-        commands.entity(link.tile).insert(TileNodeLink {
-            tile: link.tile,
-            node: link.node,
-            node_type: link.node_type,
-            hovered: true,
-            anim_transition: 0.0,
-        });
-        if let Some(node) = link.node {
-            commands.entity(node).insert(TileNodeLink {
-                tile: link.tile,
-                node: link.node,
-                node_type: link.node_type,
-                hovered: true,
-                anim_transition: 0.0,
-            });
-        }
+    let Ok((node_tag, link, mut node_m)) = nodes.get_mut(over.entity) else {
+        return;
+    };
+
+    // Hover the node itself (pick vfx by node type)
+    let (_mesh, _mat, vfx) = render_assets.get_node_assets(node_tag.node_type);
+    node_m.0 = vfx.clone();
+
+    // Hover the linked tile
+    if let Ok(mut tile_m) = tiles.get_mut(link.tile) {
+        tile_m.0 = render_assets.tile_vfx.clone();
     }
 }
 
-pub fn hover_out_event(
+fn node_hover_out_event(
     out: On<Pointer<Out>>,
-    mut commands: Commands,
-    q_links: Query<&TileNodeLink>,
+    render_assets: Res<RenderAssets>,
+    mut nodes: Query<
+        (
+            &NodeTag,
+            &TileNodeLink,
+            &mut MeshMaterial3d<StandardMaterial>,
+        ),
+        (With<NodeTag>, Without<TileTag>),
+    >,
+    mut tiles: Query<&mut MeshMaterial3d<StandardMaterial>, (With<TileTag>, Without<NodeTag>)>,
 ) {
-    if let Ok(link) = q_links.get(out.entity) {
-        commands.entity(out.entity).insert(TileNodeLink {
-            tile: link.tile,
-            node: link.node,
-            node_type: link.node_type,
-            hovered: false,
-            anim_transition: 0.0,
-        });
+    let Ok((node_tag, link, mut node_m)) = nodes.get_mut(out.entity) else {
+        return;
+    };
+
+    // Unhover node -> base material by node type
+    let (_mesh, mat, _vfx) = render_assets.get_node_assets(node_tag.node_type);
+    node_m.0 = mat.clone();
+
+    // Unhover linked tile -> base tile material
+    if let Ok(mut tile_m) = tiles.get_mut(link.tile) {
+        tile_m.0 = render_assets.tile_mat.clone();
     }
 }

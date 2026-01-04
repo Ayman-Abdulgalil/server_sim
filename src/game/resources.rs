@@ -1,14 +1,12 @@
-use super::components::TileData;
-use super::node_type::NodeType;
+use super::types::{NodeType, ToolType};
 
 use bevy::prelude::*;
 
 #[derive(Resource, Default)]
 pub struct Game {
-    pub board: Vec<Vec<TileData>>,
     pub board_size_x: usize,
     pub board_size_z: usize,
-    pub hotbar_selection: NodeType,
+    pub tool_selection: ToolType,
 }
 
 /// this resource stores all game handles (Mesh, Materials, Shaders, etc)
@@ -52,58 +50,57 @@ impl RenderAssets {
     pub fn get_node_assets(
         &self,
         node: NodeType,
-    ) -> Option<(
+    ) -> (
         Handle<Mesh>,
         Handle<StandardMaterial>,
         Handle<StandardMaterial>,
-    )> {
+    ) {
         match node {
-            NodeType::None => None,
-            NodeType::Internet => Some((
+            NodeType::Internet => (
                 self.internet_mesh.clone(),
                 self.internet_mat.clone(),
                 self.internet_vfx.clone(),
-            )),
-            NodeType::LoadBalancer => Some((
+            ),
+            NodeType::LoadBalancer => (
                 self.loadbalancer_mesh.clone(),
                 self.loadbalancer_mat.clone(),
                 self.loadbalancer_vfx.clone(),
-            )),
-            NodeType::Firewall => Some((
+            ),
+            NodeType::Firewall => (
                 self.firewall_mesh.clone(),
                 self.firewall_mat.clone(),
                 self.firewall_vfx.clone(),
-            )),
-            NodeType::Database => Some((
+            ),
+            NodeType::Database => (
                 self.database_mesh.clone(),
                 self.database_mat.clone(),
                 self.database_vfx.clone(),
-            )),
-            NodeType::Compute => Some((
+            ),
+            NodeType::Compute => (
                 self.compute_mesh.clone(),
                 self.compute_mat.clone(),
                 self.compute_vfx.clone(),
-            )),
-            NodeType::Storage => Some((
+            ),
+            NodeType::Storage => (
                 self.storage_mesh.clone(),
                 self.storage_mat.clone(),
                 self.storage_vfx.clone(),
-            )),
-            NodeType::Queue => Some((
+            ),
+            NodeType::Queue => (
                 self.queue_mesh.clone(),
                 self.queue_mat.clone(),
                 self.queue_vfx.clone(),
-            )),
-            NodeType::Cache => Some((
+            ),
+            NodeType::Cache => (
                 self.cache_mesh.clone(),
                 self.cache_mat.clone(),
                 self.cache_vfx.clone(),
-            )),
-            NodeType::CDN => Some((
+            ),
+            NodeType::CDN => (
                 self.cdn_mesh.clone(),
                 self.cdn_mat.clone(),
                 self.cdn_vfx.clone(),
-            )),
+            ),
         }
     }
 }

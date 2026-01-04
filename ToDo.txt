@@ -1,8 +1,8 @@
 # Improvement
-Don't create a new TileNodeLink component on every hover event. Updat the already existing one.
-Reorganize the tile and nodes systems and functions.
 
 # Next Step
+Extend game states
+Setup a ui
 Make a selection vfx.
 Make visual node links.
 Model network frames.

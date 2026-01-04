@@ -66,6 +66,7 @@ pub fn setup_fixed_cam_ui(mut commands: Commands) {
             ))
             .id();
 
+        let idx: usize = idx;
         let number_text = commands
             .spawn((
                 Text::new(idx.to_string()),

@@ -6,7 +6,13 @@ pub const GAME_BOARD_SIZE_Z: usize = 32;
 
 // Tile and node spawn heights
 pub const TILE_SPAWN_Y: f32 = 0.0;
+pub const TILE_SPAWN_DELAY: u64 = 50;
 pub const NODE_SPAWN_Y: f32 = 0.26;
+pub const SPAWN_FALL_Y: f32 = 0.5;
+
+pub const TILE_LIFT_Y: f32 = 0.10;
+pub const NODE_HOVER_LIFT: f32 = 0.18;
+pub const HOVER_LIFT_SPEED: f32 = 14.0;
 
 // render resources
 pub const TILE_PATH: &str = "models/Tile.glb#Mesh0/Primitive0";

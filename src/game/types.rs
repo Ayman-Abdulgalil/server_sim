@@ -1,7 +1,6 @@
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
 pub enum NodeType {
     #[default]
-    None,
     Internet,
     LoadBalancer,
     Firewall,
@@ -14,8 +13,7 @@ pub enum NodeType {
 }
 
 impl NodeType {
-    const ALL: [NodeType; 10] = [
-        Self::None,
+    const ALL: [NodeType; 9] = [
         Self::Internet,
         Self::LoadBalancer,
         Self::Firewall,
@@ -29,7 +27,6 @@ impl NodeType {
 
     pub const fn name(self) -> &'static str {
         match self {
-            Self::None => "Dlt",
             Self::Internet => "W.W.W",
             Self::LoadBalancer => "LB",
             Self::Firewall => "FW",
@@ -44,5 +41,18 @@ impl NodeType {
 
     pub fn all() -> impl Iterator<Item = (NodeType, &'static str)> {
         Self::ALL.into_iter().map(|t| (t, t.name()))
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Debug, Eq)]
+pub enum ToolType {
+    Add(NodeType),
+    Delete,
+    Select,
+}
+
+impl Default for ToolType {
+    fn default() -> Self {
+        ToolType::Add(NodeType::default())
     }
 }

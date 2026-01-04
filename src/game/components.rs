@@ -1,19 +1,24 @@
-use super::node_type::NodeType;
+use super::types::NodeType;
 
 use bevy::prelude::*;
-
-#[derive(Clone, Copy, Debug)]
-pub struct TileData {
-    pub tile_entity: Entity,
-    pub node_entity: Option<Entity>,
-}
 
 #[derive(Component, Clone, Copy, Debug)]
 pub struct TileNodeLink {
     pub tile: Entity,
     pub node: Option<Entity>,
-    pub node_type: Option<NodeType>,
+}
 
-    pub hovered: bool,
-    pub anim_transition: f32,
+#[derive(Component)]
+pub struct TileTag {
+    pub selected: bool,
+    pub base_y: f32,
+    pub curr_y: f32,
+}
+
+#[derive(Component)]
+pub struct NodeTag {
+    pub node_type: NodeType,
+    pub selected: bool,
+    pub base_y: f32,
+    pub curr_y: f32,
 }
