@@ -1,30 +1,32 @@
 use bevy::prelude::*;
 
-use crate::camera::CamState;
-use crate::game::GameState;
+use crate::game::state::GameState;
 
-use super::game_over::{cleanup_game_over, handle_game_over_input, show_game_over_screen};
-use super::hotbar::{cleanup_fixed_cam_ui, setup_fixed_cam_ui};
-use super::hotbar_input::{handle_hotkeys, handle_ui_buttons};
-use super::hotbar_style::update_button_colors;
+use super::{hud, setup_menu, systems};
 
 pub struct UIPlugin;
 
 impl Plugin for UIPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(CamState::Fixed), setup_fixed_cam_ui)
-            .add_systems(OnExit(CamState::Fixed), cleanup_fixed_cam_ui)
-            .add_systems(
-                Update,
-                (handle_ui_buttons, handle_hotkeys, update_button_colors)
-                    .run_if(in_state(CamState::Fixed)),
+        // Setup menu only in Setup state
+        app.add_systems(OnEnter(GameState::Setup), setup_menu::spawn_setup_menu)
+            .add_systems(OnExit(GameState::Setup), setup_menu::despawn_setup_menu)
+            .add_systems(Update, systems::setup_menu_buttons.run_if(in_state(GameState::Setup)));
+
+        // HUD for all states except Setup (Paused/Playing/Fast/GameOver)
+        app.add_systems(
+            OnEnter(GameState::Paused),
+            hud::ensure_hud_spawned, // spawn once when first reaching paused
+        )
+        .add_systems(
+            Update,
+            (
+                systems::top_bar_buttons,
+                systems::hotbar_buttons,
+                systems::node_palette_buttons,
+                systems::sync_hud_visibility,
             )
-            // Optional: wire up game-over UI now that you already have the systems.
-            .add_systems(OnEnter(GameState::GameOver), show_game_over_screen)
-            .add_systems(OnExit(GameState::GameOver), cleanup_game_over)
-            .add_systems(
-                Update,
-                handle_game_over_input.run_if(in_state(GameState::GameOver)),
-            );
+                .run_if(not(in_state(GameState::Setup))),
+        );
     }
 }

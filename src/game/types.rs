@@ -44,15 +44,12 @@ impl NodeType {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Eq)]
+#[derive(Clone, Copy, PartialEq, Debug, Eq, Default)]
 pub enum ToolType {
+    #[default]
+    Select,
     Add(NodeType),
     Delete,
-    Select,
-}
-
-impl Default for ToolType {
-    fn default() -> Self {
-        ToolType::Add(NodeType::default())
-    }
+    Link,
+    Move,
 }

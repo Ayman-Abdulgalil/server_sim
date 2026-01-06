@@ -103,8 +103,7 @@ fn tile_click_event(
                 );
             }
         }
-
-        ToolType::Select => {}
+        _ => {}
     }
 }
 

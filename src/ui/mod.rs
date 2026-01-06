@@ -1,8 +1,7 @@
-pub mod components;
-pub mod game_over;
-pub mod hotbar;
-pub mod hotbar_input;
-pub mod hotbar_style;
 pub mod plugin;
+pub mod styles;
+pub mod setup_menu;
+pub mod hud;
+pub mod systems;
 
 pub use plugin::UIPlugin;
